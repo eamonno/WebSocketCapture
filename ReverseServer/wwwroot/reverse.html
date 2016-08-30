@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>WebSocket Test - Reverse</title>
+    <script src="reverse.js"></script>
+</head>
+<body onload="check_connection()">
+    <input id="forwardtext" type="text" value="Reverse me!" />
+    <input id="sendbutton" type="button" value="Send" onclick="send_request()"/>
+    <br />Responses:<br />
+    <ul id="responses">
+    </ul>
+    <p id="connectionstatus"></p>
+</body>
+</html>
