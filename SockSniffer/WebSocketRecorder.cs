@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Text;
 using System.Collections.Generic;
+using PcapDotNet.Core;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.Http;
 using PcapDotNet.Packets.IpV4;
@@ -15,8 +17,9 @@ namespace SockSniffer
         private IpV4Address _dstIp;
         private ushort _srcPort;
         private ushort _dstPort;
+        private DateTime _startTime = DateTime.Now;
 
-        private List<Packet> _packets = new List<Packet>();
+        private readonly List<Packet> _packets = new List<Packet>();
 
         public WebSocketRecorder(IpV4Datagram ip)
         {
@@ -45,18 +48,48 @@ namespace SockSniffer
             // Correct stream, save the packet
             _packets.Add(packet);
 
-            if (tcp.Http.IsValid && tcp.Http.IsRequest && ((HttpRequestDatagram)tcp.Http).Method.KnownMethod == HttpRequestKnownMethod.Get)
+            string dir = ip.Source == _srcIp ? "->" : "<-";
+            Console.Write($"WebSocketRecorder on stream: {_srcIp}:{_srcPort} {dir} {_dstIp}:{_dstPort} ({_packets.Count}) :: ");
+            if (tcp.Http.IsValid)
             {
-                Console.WriteLine("Http Handshake");
+                if (tcp.Http.IsRequest && ((HttpRequestDatagram)tcp.Http).Method?.KnownMethod == HttpRequestKnownMethod.Get)
+                {
+                    Console.WriteLine("HTTP Upgrade Requested");
+                    return;
+                }
+                if (tcp.Http.IsResponse && ((HttpResponseDatagram)tcp.Http).StatusCode == 101)
+                {
+                    Console.WriteLine("HTTP Upgrade Confirmed");
+                    return;
+                }
             }
-            else
+            // Http.IsValid isn't terribly reliable, if none of the above matches just assume its websocket even if it
+            // is reporting as valid http
+            var ws = new WebSocketDatagram(tcp.Payload);
+            if (ws.IsValid)
             {
-                var ws = tcp.WebSocket();
-                Console.WriteLine($"Final: {ws.IsFinal}, Masked: {ws.IsMasked}, Opcode: {ws.Opcode}, PayloadLength: {ws.PayloadLength}");
+                Console.Write($"Final: {ws.IsFinal}, Masked: {ws.IsMasked}, Opcode: {ws.Opcode}, PayloadLength: {ws.PayloadLength}");
+                if (ws.Opcode == WebSocketDatagram.OpcodeType.TextFrame)
+                {
+                    Console.Write(Encoding.UTF8.GetString(ws.UnmaskedPayload));
+                }
+                else if (ws.Opcode == WebSocketDatagram.OpcodeType.Close)
+                {
+                    source.RemoveConsumer(this);
+                    WritePcapFile();
+                }
+                Console.WriteLine();
             }
-            Console.WriteLine(ToString());
+            else if (tcp.Payload.Length >= 2)   // 0 or 1 bytes is a TCP - Keep-Alive packet
+            {
+                Console.WriteLine($"Invalid WebSocket packet: {tcp.Payload.Length}");
+            }
         }
 
-        public override string ToString() => $"WebSocketRecorder on stream: {_srcIp}:{_srcPort} -> {_dstIp}:{_dstPort} ({_packets.Count})";
+        public void WritePcapFile()
+        {
+            string filename = $"websock__{_srcIp}_{_srcPort}__{_dstIp}_{_dstPort}__" + _packets[0].Timestamp.ToString("hh-mm-ss-fff") + ".pcap";
+            PacketDumpFile.Dump(filename, DataLinkKind.Ethernet, 65536, _packets);
+        }
     }
 }

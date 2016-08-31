@@ -15,6 +15,11 @@ namespace TestServer
 
     public class Reverser : WebSocketBehavior
     {
+        public Reverser()
+        {
+            IgnoreExtensions = true;
+        }
+
         protected override void OnMessage(MessageEventArgs e)
         {
             WriteLine($"Message received: {e.Data}");

@@ -8,20 +8,20 @@ namespace SockSniffer
     // class
     public static class DataSegmentExtensions
     {
-        public static ushort ToUInt16(this DataSegment ds, int offset) => (ushort)((int)ds[1] << 8 + (int)ds[0]);
+        public static ushort ToUInt16(this DataSegment ds, int offset) => (ushort)((ds[offset] << 8) + ds[1 + offset]);
 
         public static uint ToUInt32(this DataSegment ds, int offset)
         {
-            return (((uint)ds[3]) << 24) + (((uint)ds[2]) << 16)
-                   + (((uint)ds[1]) << 8) + ds[0];
+            return (((uint)ds[3 + offset]) << 24) + (((uint)ds[2 + offset]) << 16)
+                   + (((uint)ds[1 + offset]) << 8) + ds[offset];
         }
 
         public static ulong ToULong(this DataSegment ds, int offset)
         {
-            return (((ulong)ds[7]) << 56) + (((ulong)ds[6]) << 48)
-                   + (((ulong)ds[5]) << 40) + (((ulong)ds[4]) << 32)
-                   + (((ulong)ds[3]) << 24) + (((ulong)ds[2]) << 16)
-                   + (((ulong)ds[1]) << 8) + ds[0];
+            return (((ulong)ds[7 + offset]) << 56) + (((ulong)ds[6 + offset]) << 48)
+                   + (((ulong)ds[5 + offset]) << 40) + (((ulong)ds[4 + offset]) << 32)
+                   + (((ulong)ds[3 + offset]) << 24) + (((ulong)ds[2 + offset]) << 16)
+                   + (((ulong)ds[1 + offset]) << 8) + ds[offset];
         }
     }
 }

@@ -37,6 +37,7 @@ namespace SockSniffer
                             secWebsocketKey = field.ValueString;
                         if (field.Name.Equals("Sec-WebSocket-Version", StringComparison.OrdinalIgnoreCase))
                             secWebsocketVersion = field.ValueString;
+                        //Console.WriteLine($"{field.Name}: {field.ValueString}");
                     }
                     if (host != null && upgrade != null && connection != null && secWebsocketKey != null && secWebsocketVersion != null)
                     {

@@ -23,7 +23,7 @@ namespace SockSniffer
 
             _device = device;
 
-            _comminicator = _device.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 0);
+            _comminicator = _device.Open(65536, PacketDeviceOpenAttributes.MaximumResponsiveness | PacketDeviceOpenAttributes.Promiscuous, 0);
             if (_comminicator.DataLink.Kind != DataLinkKind.Ethernet)
                 throw new ArgumentException("Only Ethernet devices are supported for live packet production.");
 
