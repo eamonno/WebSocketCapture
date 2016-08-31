@@ -16,7 +16,7 @@ namespace SockSniffer
         private PacketCommunicator _comminicator;
         private BerkeleyPacketFilter _filter;
 
-        public LivePacketProducer(LivePacketDevice device)
+        public LivePacketProducer(LivePacketDevice device, string filter = "ip and tcp")
         {
             if (device == null)
                 throw new ArgumentException("Device must not be null");
@@ -27,7 +27,7 @@ namespace SockSniffer
             if (_comminicator.DataLink.Kind != DataLinkKind.Ethernet)
                 throw new ArgumentException("Only Ethernet devices are supported for live packet production.");
 
-            _filter = _comminicator.CreateFilter("ip and tcp");
+            _filter = _comminicator.CreateFilter(filter);
             if (_filter != null)
                 _comminicator.SetFilter(_filter);
         }
