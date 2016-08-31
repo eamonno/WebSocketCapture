@@ -62,9 +62,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataSegmentExtensions.cs" />
     <Compile Include="DeviceExtensions.cs" />
+    <Compile Include="IPacketConsumer.cs" />
+    <Compile Include="IPacketProducer.cs" />
+    <Compile Include="LivePacketProducer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TcpDatagramExtensions.cs" />
+    <Compile Include="TrafficLogger.cs" />
+    <Compile Include="WebSocketDatagram.cs" />
+    <Compile Include="WebSocketDetector.cs" />
+    <Compile Include="WebSocketRecorder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
