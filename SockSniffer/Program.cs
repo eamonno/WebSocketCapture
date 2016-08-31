@@ -1,6 +1,7 @@
 ﻿using static System.Console;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.Transport;
@@ -84,22 +85,24 @@ namespace SockSniffer
         {
             IpV4Datagram ip = packet.Ethernet.IpV4;
             TcpDatagram tcp = ip.Tcp;
-            
-            Write(packet.Timestamp.ToString("hh:mm:ss.fff"));
-            Write(tcp.Http == null ? "  " : " *");
-            Write(" (" + packet.Length + ") ");
-            Write(ip.Source + ":" + tcp.SourcePort + " -> " + ip.Destination + ":" + tcp.DestinationPort);
+
+            var msg = new StringBuilder();
+            msg.Append(packet.Timestamp.ToString("hh:mm:ss.fff"));
+            msg.Append(tcp.Http == null ? "  " : " *");
+            msg.Append(" (").Append(packet.Length).Append(") ");
+            msg.Append(ip.Source).Append(":").Append(tcp.SourcePort).Append(" -> ");
+            msg.Append(ip.Destination).Append(":").Append(tcp.DestinationPort).Append(' ');
             if (tcp.Http.IsRequest && ((HttpRequestDatagram)tcp.Http).Method != null)
             {
                 var http = (HttpRequestDatagram)tcp.Http;
-                Write(" " + (http.Method?.Method ?? "???") + " " + http.Uri + " " + http.Version + " " + http.Body);
+                msg.Append(http.Method?.Method ?? "???").Append(' ').Append(http.Uri).Append(' ').Append(http.Version);
             }
             else if (tcp.Http.IsResponse)
             {
                 var http = (HttpResponseDatagram)tcp.Http;
-                Write(" " + http.StatusCode + " " + http.ReasonPhrase);
+                msg.Append(http.StatusCode).Append(' ').Append(http.ReasonPhrase);
             } 
-            WriteLine();
+            WriteLine(msg);
         }
     }
 
@@ -110,17 +113,35 @@ namespace SockSniffer
     {
         public void HandlePacket(IPacketProducer source, Packet packet)
         {
-            IpV4Datagram ip = packet.Ethernet.IpV4;
-            TcpDatagram tcp = ip.Tcp;
-            if (tcp.Http.IsRequest && ((HttpRequestDatagram)tcp.Http).Method != null)
+            HttpDatagram http = packet.Ethernet.IpV4.Tcp.Http;
+            if (http.IsValid && http.IsRequest)
             {
-                var http = (HttpRequestDatagram)tcp.Http;
+                var req = (HttpRequestDatagram)http;
+                if (req.Method?.KnownMethod == HttpRequestKnownMethod.Get)
+                {
+                    // Compulsory fields for establishing a WebSocket connection
+                    string host = null;
+                    string upgrade = null;
+                    string connection = null;
+                    string secWebsocketKey = null;
+                    string secWebsocketVersion = null;
+
+                    foreach (HttpField field in req.Header)
+                    {
+                        if (field.Name.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                            host = field.ValueString;
+                        if (field.Name.Equals("Upgrade", StringComparison.OrdinalIgnoreCase))
+                            upgrade = field.ValueString;
+                        if (field.Name.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                            connection = field.ValueString;
+                        if (field.Name.Equals("Sec-WebSocket-Key", StringComparison.OrdinalIgnoreCase))
+                            secWebsocketKey = field.ValueString;
+                        if (field.Name.Equals("Sec-WebSocket-Version", StringComparison.OrdinalIgnoreCase))
+                            secWebsocketVersion = field.ValueString;
+                    }
+                    WriteLine($"Http Get Detected {host} {upgrade} {connection} {secWebsocketKey} {secWebsocketVersion}");
+                }
             }
-            else if (tcp.Http.IsResponse)
-            {
-                var http = (HttpResponseDatagram)tcp.Http;
-            }
-            WriteLine();
         }
     }
 
@@ -140,6 +161,7 @@ namespace SockSniffer
         {
             var producer = new LivePacketProducer(SelectListenDevice());
             producer.AddConsumer(new TrafficLogger());
+            producer.AddConsumer(new WebSocketDetector());
             producer.UpdateForever();
         }
 
